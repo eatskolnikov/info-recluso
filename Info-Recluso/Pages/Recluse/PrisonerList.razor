@@ -1,0 +1,221 @@
+﻿@page "/prisoner"
+@using AutoMapper
+@using Datos.Entities
+@using Datos.Generic
+@using Datos.Dtos
+@using Datos.Interfaces
+@using Datos.Utilities
+@using Info_Recluso.Components
+
+@inject IMapper mapper
+@inject ISnackbar snackbar
+
+@attribute [Authorize(Roles = "dev,admin,judge,officer")]
+
+@if (Prisoners is null)
+{
+    <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+        <Progress />
+    </MudStack>
+}
+else if (Prisoners.Count() == decimal.Zero)
+{
+    <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Informacion</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText>En estos momentos no hay datos que mostrar</MudText>
+                <AuthorizeView Roles="admin,officer">
+                    <Authorized>
+                        <MudText Typo="Typo.body2">Presiona el boton agregar para añadir</MudText>
+                    </Authorized>
+                </AuthorizeView>
+            </MudCardContent>
+            <MudCardActions>
+                <AuthorizeView Roles="admin,officer">
+                    <Authorized>
+                        <MudButton OnClick="AddPrisoner" Variant="Variant.Text" Color="Color.Primary">Agregar</MudButton>
+                    </Authorized>
+                </AuthorizeView>
+            </MudCardActions>
+        </MudCard>
+    </MudStack>
+}
+else
+{
+    <MudStack>
+        <MudDataGrid Items="@Prisoners.Take(1000)" T="Prisoner" Hideable="true" QuickFilter="@_quickFilter">
+
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Listado de Reclusos</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            </ToolBarContent>
+
+            <Columns>
+                <PropertyColumn Property="x => FullName(x)" Title="Nombre Completo" />
+                <PropertyColumn Property="x => x.Crimes" Title="Delito" />
+                <PropertyColumn Property="x => x.Gender" Title="Género" />
+                <PropertyColumn Property="x => x.Prison" Title="Recinto" />
+                <PropertyColumn Property="x => x.ConvictionStatus" Title="Estatus de la Condena" />
+
+                <TemplateColumn CellClass="d-flex justify-end">
+                    <CellTemplate>
+                        <MudStack Row>
+                            <MudChip Size="Size.Medium" Icon="@Icons.Material.Rounded.Edit"
+                                     OnClick="async (x)=> await EditPrisoner( context.Item )" Variant="Variant.Outlined" Color="Color.Primary">
+                                Editar
+                            </MudChip>
+
+                            <MudFab OnClick="async (x)=> await DelPrisoner( context.Item )" Color="Color.Secondary" StartIcon="@Icons.Material.Rounded.Delete" Size="Size.Small" />
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudStack>
+}
+
+@code {
+    #region Injections
+    [Inject] private IDialogService DialogService { get; set; }
+    [Inject] private NavigationManager navigationManager { get; set; }
+    [Inject] private IPrisonerServices prisonerManager { get; set; }
+    #endregion
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationState { get; set; }
+
+    private IEnumerable<Prisoner> Prisoners { get; set; }
+
+    protected override async Task OnInitializedAsync() => await GetPrisoners();
+
+    private async Task GetPrisoners()
+    {
+        var (prisoners, response) = await prisonerManager?.GetPrisoners();
+
+        if (response == Response.Ok())
+        {
+            prisoners.Where(x => x.Deleted == false).ToList();
+
+            Prisoners = prisoners;
+
+            _searchString = string.Empty;
+            StateHasChanged();
+        }
+    }
+
+    private string FullName(Prisoner prisoner) => $"{prisoner.Names} {prisoner.LastName}";
+
+    private async Task DelPrisoner(Prisoner prisoner)
+    {
+        var next = await VerifierRoles();
+
+        if (next == false)
+        {
+            snackbar.Add("No puedes Proceder", Severity.Info);
+            return;
+        }
+
+        bool? result = await DialogService.ShowMessageBox("Aviso", "La eliminacion es permanente", yesText: "Borrar!", cancelText: "Cancel");
+
+        if (result == null)
+            return;
+
+        var response = await prisonerManager?.DelPrisonerByIdAsync(prisoner);
+
+        if (response == Response.Ok())
+        {
+            prisoner.Deleted = true;
+        }
+
+        await GetPrisoners();
+
+        StateHasChanged();
+    }
+
+    private void AddPrisoner() => navigationManager.NavigateTo("/add/prisoner");
+
+    private async Task EditPrisoner(Prisoner prisoner)
+    {
+        var next = await VerifierRoles();
+
+        if (next == false)
+        {
+            snackbar.Add("No puedes Proceder", Severity.Info);
+            return;
+        }
+
+        var diagConfig = new DialogOptions()
+            {
+                CloseButton = true,
+                CloseOnEscapeKey = true,
+                Position = DialogPosition.Center,
+                FullWidth = true,
+                DisableBackdropClick = false,
+                MaxWidth = MaxWidth.Small
+            };
+
+        if (prisoner != null)
+        {
+            var edit = mapper.Map<PrisonerEditDto>(prisoner);
+            PrisonerEdit.model = edit;
+            var result = await DialogService.Show<PrisonerEdit>("", diagConfig).Result;
+            var editPrisoner = result.Data as PrisonerEditDto;
+
+            if (!result.Canceled)
+                await GetPrisoners();
+
+            StateHasChanged();
+            return;
+        }
+
+        snackbar.Add("No es posible editar", Severity.Info);
+    }
+
+    private async Task<bool> VerifierRoles()
+    {
+        var authState = await authenticationState;
+        var user = authState.User;
+
+        if (user.IsInRole("dev") || user.IsInRole("admin") || user.IsInRole("officer"))
+            return true;
+
+        return false;
+    }
+
+    private string _searchString;
+    private Func<Prisoner, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Names.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.LastName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.Crimes.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.Gender.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.ConvictionStatus.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if ($"{x.LastName} {x.Prison} {x.ConvictionStatus}".Contains(_searchString))
+            return true;
+
+        return false;
+    };
+}

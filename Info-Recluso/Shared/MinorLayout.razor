@@ -1,0 +1,16 @@
+﻿@inherits LayoutComponentBase
+
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudThemeProvider @ref="mudThemeProvider" Theme="mainTheme" />
+
+<div class="page">
+        <article class="content px-4">
+            @Body
+        </article>
+</div>
+
+@code{
+    private MudTheme mainTheme = new() { Palette = new Palette() { Primary = Colors.Green.Darken4, Secondary = Colors.Shades.Black } };
+    private MudThemeProvider mudThemeProvider;
+}

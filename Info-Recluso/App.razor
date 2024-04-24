@@ -1,0 +1,32 @@
+﻿<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <Authorizing>
+                    <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+                        <p> Cargando...</p>
+                    </MudStack>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Dirreccion no encontrada.</p>
+
+                <div Class="d-flex align-center justify-center mx-2">
+                    <MudImage Fluid="true"
+                              Class=" rounded-3"
+                              Src="img/404.gif"
+                              Alt="404 Page"
+                              ObjectPosition="ObjectPosition.Center"
+                              Style="max-width:250px !important;  border-top-left-radius: 20px 20px !important;border-top-right-radius: 20px 20px !important;  border-bottom-left-radius: 20px 20px !important;border-bottom-right-radius: 20px 20px !important;  "
+                              ObjectFit="ObjectFit.Cover" />
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+

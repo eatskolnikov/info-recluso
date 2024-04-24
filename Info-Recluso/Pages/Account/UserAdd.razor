@@ -1,0 +1,190 @@
+﻿@page "/add/user"
+@using Datos.Entities
+@using Datos.Generic
+@using Datos.Dtos
+@using Datos.Interfaces
+@using Datos.Utilities
+@using System.Globalization
+
+@inject ISnackbar snackbar
+@inject NavigationManager navigationManager
+@inject IPrisonerServices prisonerManager
+@inject AccountServices accountServices
+
+@attribute [Authorize(Roles = "dev,admin")]
+
+<PageTitle>Usuario</PageTitle>
+
+<EditForm @ref=editForm Model="@model">
+    <DataAnnotationsValidator />
+    <MudPaper Elevation="1" Class="clr-main">
+        <MudItem xs=12 lg=12 sm=12 xxl=12 Class="d-flex flex-wrap p-3 mx-sm-4 clr-main">
+            <MudItem xs=12 sm=12 xl=12 xxl=12 Class="clr-main">
+                <MudPaper Elevation="0" Class="mb-2 px-0 mx-0 clr-main">
+                    <MudToolBar Dense=true Class="px-0 mx-0">
+                        <MudChip Size="Size.Small"
+                                 DisableRipple=true
+                                 Disabled=false
+                                 Label=true
+                                 Style="cursor:default"
+                                 Variant="Variant.Outlined"
+                                 Color="Color.Primary"
+                                 Class="mt-3">
+                            <MudText Typo="Typo.button">
+                                <b>Usuario</b>
+                            </MudText>
+                        </MudChip>
+
+                        <MudSpacer />
+
+                        <MudTooltip Text="Limpiar Campos" Arrow="true" Placement="Placement.Left">
+                            <MudIconButton Icon="@Icons.Material.Rounded.Brush" OnClick="@(()=> NewUser())" />
+                        </MudTooltip>
+
+                        @if (MudDialog is not null)
+                        {
+                            <MudTooltip Text="Fijar Ventana" Color="Color.Primary" Placement="Placement.Top">
+                                <MudIconButton OnClick="@(() => CloseModal = !CloseModal)" Color="@((CloseModal == true) ? Color.Dark : Color.Primary)" Icon="@Icons.Material.Outlined.PushPin" />
+                            </MudTooltip>
+                            <MudTooltip Text="Cerrar" Color="Color.Primary" Placement="Placement.Top">
+                                <MudIconButton OnClick="@(async () => await ClosePopUp(DialogResult.Cancel(),force:true))" Icon="@Icons.Material.Outlined.Close" />
+                            </MudTooltip>
+                        }
+                    </MudToolBar>
+                </MudPaper>
+            </MudItem>
+
+            <MudDivider Light=false Class="my-2 mx-1" />
+
+            @* nombre *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField Label="Nombre Usuario" Class="mx-4"
+                              @bind-Value="model.UserName"
+                              For="@(() => model.UserName)"
+                              AdornmentIcon="@Icons.Material.Rounded.Person"
+                              Adornment=" Adornment.Start"
+                              Margin="Margin.Dense"
+                              IconSize="Size.Small"
+                              DisableUnderLine=@false />
+            </MudItem>
+
+            @* Email *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField Label="Correo" Class="mx-4"
+                              @bind-Value="model.Email"
+                              For="@(() => model.Email)"
+                              AdornmentIcon="@Icons.Material.Rounded.Email"
+                              Adornment=" Adornment.Start"
+                              Margin="Margin.Dense"
+                              IconSize="Size.Small"
+                              DisableUnderLine=false />
+            </MudItem>
+
+            @* Phone *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField Label="Teléfono" Class="mx-4"
+                              @bind-Value="model.PhoneNumber"
+                              For="@(() => model.PhoneNumber)"
+                              AdornmentIcon="@Icons.Material.Rounded.Phone"
+                              Adornment=" Adornment.Start"
+                              Margin="Margin.Dense"
+                              IconSize="Size.Small"
+                              DisableUnderLine=false />
+            </MudItem>
+
+            @* Password *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField @bind-Value="model.Pass" For="@(() => model.Pass)"
+                              Label="Password"
+                              Class="mx-4"
+                              InputType="@PasswordInput"
+                              Adornment="Adornment.End"
+                              Margin="Margin.Dense"
+                              IconSize="Size.Small"
+                              DisableUnderLine=false
+                              AdornmentIcon="@PasswordInputIcon"
+                              OnAdornmentClick="ViewPass" />
+            </MudItem>
+
+            @*Roles*@
+            <MudItem xs=12 sm=12 xl=4 xxl=3>
+                <MudSelect Margin="Margin.Dense" Class="mx-4" @bind-Value="rolSelected" Label="Permisos" Dense="true" OpenIcon="@Icons.Material.Rounded.PrivacyTip" AdornmentColor="Color.Secondary">
+                    @foreach (Roles.UserRoles item in Enum.GetValues(typeof(Roles.UserRoles)))
+                    {
+                        <MudSelectItem Value="@item">@item</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudChip Class="mb-1 shadow my-4 mx-2 ml-auto" Size="Size.Small"
+                     @onclick="@(() => OnValidSubmit())" Variant="Variant.Filled" Color="Color.Primary">
+                + Agregar
+            </MudChip>
+        </MudItem>
+    </MudPaper>
+</EditForm>
+
+@code {
+    private Roles.UserRoles rolSelected { get; set; } =Roles.UserRoles.officer;
+
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = null;
+
+    private bool CloseModal = true;
+    private bool Success;
+    private EditForm editForm = new EditForm();
+    private UserDto model = new();
+
+    private Task NewUser()
+    {
+        model = (new());
+        return Task.CompletedTask;
+    }
+
+    private Task ClosePopUp(DialogResult dialog, bool force = false)
+    {
+        if (MudDialog != null && (force || CloseModal))
+            MudDialog.Close(dialog);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OnValidSubmit()
+    {
+        if (!editForm.EditContext.Validate())
+        {
+            snackbar.Add("Completa todos los pasos", Severity.Error);
+            return;
+        }
+
+        var result = await accountServices.UserCreateAsync(model, rolSelected.ToString());
+
+        if (result.response == Response.Ok())
+        {
+            snackbar.Add(result.response.Message, Severity.Success);
+            await NewUser();
+            return;
+        }
+
+        snackbar.Add(string.IsNullOrEmpty(result.response?.Message) ? "Ha ocurrido error" : result.response?.Message, Severity.Error);
+    }
+
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    void ViewPass()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+}

@@ -1,0 +1,118 @@
+﻿@page "/login"
+@using Datos;
+@using Datos.Dtos
+@using Datos.Generic
+@using Info_Recluso.Auth
+@using global::Auth;
+
+@attribute [Authorize(Roles = "dev,anonymous")]
+
+@layout MinorLayout
+
+@inject ISnackbar snackbar
+@inject AccountServices accountServices
+@inject AuthenticationStateProvider authState
+@inject NavigationManager navigations
+
+<style>
+    a {
+        display: block;
+        text-align: right;
+        text-decoration: none;
+        color: #999;
+        font-size: 0.9rem;
+        transition: .3s;
+    }
+
+        a:hover {
+            color: #38d39f;
+        }
+</style>
+
+<MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+    <MudStack Style="height:90vh; width:90%;"
+              Spacing=0 Row="true"
+              Justify="Justify.Center"
+              AlignItems="AlignItems.Center">
+
+        <MudItem xs=10 md=6>
+            <MudStack Row=false Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudAvatar Class="mt-2 " Color="Color.Warning"
+                           Elevation=0
+                           Size=Size.Large
+                           Variant="Variant.Text"
+                           Style="background-color:transparent !important;height:100px; width:100px; ">
+                    <MudImage Fluid=true Src="img/key.png"
+                              ObjectFit=ObjectFit.Cover
+                              ObjectPosition="ObjectPosition.Center"
+                              Style="max-width:80px !important; " />
+                </MudAvatar>
+
+                <MudText Align="Align.Center" Typo="Typo.h3">Info Recluso</MudText>
+
+                <MudTextField Label="Email"
+                              @bind-Value="@userAccount.Email"
+                              For="@(() => @userAccount.Email)"
+                              AutoFocus=false
+                              AdornmentIcon="@Icons.Material.Rounded.Email"
+                              AdornmentColor="Color.Info"
+                              Adornment="Adornment.Start"
+                              Margin="Margin.Dense"
+                              FullWidth=true />
+
+                <MudTextField Label="Contraseña" Class=""
+                              @bind-Value="@userAccount.Pass"
+                              For="@(() => @userAccount.Pass)"
+                              InputType="InputType.Password"
+                              AutoFocus=false
+                              AdornmentColor="Color.Info"
+                              AdornmentIcon="@Icons.Material.Rounded.Lock"
+                              Adornment="Adornment.Start"
+                              Margin="Margin.Dense"
+                              FullWidth=true />
+
+                <MudButton Class="mb-3"
+                           Variant="Variant.Outlined"
+                           EndIcon="@Icons.Material.Rounded.Login"
+                           Color="Color.Primary"
+                           OnClick="@(async () => await LoginUserAsync())"
+                           Style="max-width: 250px; width:100%;"
+                           Disabled=@false>
+                    LOGIN
+                </MudButton>
+            </MudStack>
+        </MudItem>
+
+        <MudHidden Breakpoint="Breakpoint.Xs" Invert="false">
+            <MudItem xs=5 md=6>
+                <div Class="d-flex align-center justify-center">
+                    <MudImage Fluid="false" Src="img/access.svg"
+                              Alt="Swedish Farm House"
+                              ObjectPosition="ObjectPosition.Center"
+                              Style="width:500px !important;"
+                              ObjectFit="ObjectFit.Cover" />
+                </div>
+            </MudItem>
+        </MudHidden>
+    </MudStack>
+</MudStack>
+
+@code {
+
+    UserDto userAccount = new UserDto { Email = "dev@inforecluso.com", UserName = "Michael", Pass = "Dev123456*" };
+
+    private async Task LoginUserAsync()
+    {
+        var result = await accountServices.UserSignInAsync(userAccount);
+
+        if (result.response == Response.Ok())
+        {
+            var authSection = (CustomProviderAuthenticate)authState;
+            await authSection.LogIn(result.token);
+            navigations.NavigateTo("/", true);
+            return;
+        }
+
+        snackbar.Add("Datos incorrectos", Severity.Warning);
+    }
+}

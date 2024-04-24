@@ -1,0 +1,158 @@
+﻿@page "/users"
+@using AutoMapper
+@using Datos.Entities
+@using Datos.Generic
+@using Datos.Dtos
+@using Datos.Interfaces
+@using Datos.Utilities
+@using Info_Recluso.Components
+
+@inject IMapper mapper
+@inject ISnackbar snackbar
+@inject AccountServices accountServices
+
+@attribute [Authorize(Roles = "dev,admin")]
+
+@if (users is null)
+{
+    <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+        <Progress />
+    </MudStack>
+}
+else
+{
+    <MudStack>
+        <MudDataGrid Items="@users.Take(100)" T="IdentityUserDTO">
+            <Columns>
+                <PropertyColumn Property="x => x.UserName " Title="Nombre Usuario" />
+                <PropertyColumn Property="x => x.Email " Title="Correo" />
+                <PropertyColumn Property="x => x.PhoneNumber " Title="Telefono" />
+                <PropertyColumn Property="x => x.RoleName " Title="Rol" />
+
+                <TemplateColumn CellClass="d-flex justify-end">
+                    <CellTemplate>
+                        <MudStack Row>
+                            <MudTooltip Text="Resetear Clave">
+                                <MudFab OnClick="async (x) => OpenResetWindows( context.Item )" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.LockReset" Size="Size.Small" />
+                            </MudTooltip>
+
+                            <MudTooltip Text="Eliminar">
+                                <MudFab OnClick="async (x)=> DelUser( context.Item )" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Delete" Size="Size.Small" />
+                            </MudTooltip>
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudStack>
+
+    <MudMessageBox @ref="mbox" Title="Nueva Clave" CancelText="Cancelar" YesText="Aceptar">
+        <MessageContent>
+            <MudTextField Label="Contraseña"
+                          @bind-Value="Password"
+                          AdornmentIcon="@Icons.Material.Rounded.Lock"
+                          Adornment=" Adornment.End"
+                          Margin="Margin.Dense"
+                          IconSize="Size.Small"
+                          DisableUnderLine=@false />
+        </MessageContent>
+    </MudMessageBox>
+}
+
+@code {
+    MudMessageBox mbox { get; set; }
+    string Password = string.Empty;
+
+    private async void OpenResetWindows(Microsoft.AspNetCore.Identity.IdentityUser user)
+    {
+        bool? result = await mbox.Show();
+
+        if (result != null)
+            ResetPassword(user, Password);
+
+        Password = string.Empty;
+
+        StateHasChanged();
+    }
+
+    #region Injections
+    [Inject] private IDialogService DialogService { get; set; }
+    [Inject] private NavigationManager navigationManager { get; set; }
+    #endregion
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationState { get; set; }
+
+    private IEnumerable<IdentityUserDTO> users { get; set; }
+
+    protected override async Task OnInitializedAsync() => GetUsers();
+
+    private async void GetUsers()
+    {
+        var (list, response) = accountServices.GetAllUsers();
+
+        if (response == Response.Ok())
+        {
+            var newTestList = new List<IdentityUserDTO>();
+
+            foreach (var x in list)
+            {
+                var getRoles = await GetUserRoles(x);
+
+                newTestList.Add(
+                    new IdentityUserDTO()
+                    {
+                        Id = x.Id,
+                        UserName = x.UserName,
+                        Email = x.Email,
+                        PhoneNumber = x.PhoneNumber,
+                        RoleName = getRoles
+                    }
+                );
+            }
+
+            users = newTestList;
+            StateHasChanged();
+        }
+    }
+
+    private async void DelUser(Microsoft.AspNetCore.Identity.IdentityUser user)
+    {
+        bool? result = await DialogService.ShowMessageBox("Aviso", "La eliminacion es permanente", yesText: "Borrar!", cancelText: "Cancel");
+
+        if (result == null)
+            return;
+
+        var response = await accountServices.UserDel(user);
+
+        if (response == Response.Ok())
+        {
+            //List Refresh
+            users = users.Where(x => x.Id != user.Id);
+
+            // show message
+            snackbar.Add("Usuario Eliminado");
+
+            StateHasChanged();
+            return;
+        }
+
+        snackbar.Add($"{response?.Message ?? "No ha sido posible eliminar"}");
+    }
+
+    private async Task<string> GetUserRoles(Microsoft.AspNetCore.Identity.IdentityUser user)
+    {
+        return await accountServices.GetUserRole(user);
+    }
+
+    private async void ResetPassword(Microsoft.AspNetCore.Identity.IdentityUser user, string pass)
+    {
+        var response = await accountServices.ResetPass(user, pass);
+        snackbar.Add(response.Message);
+    }
+
+    public class IdentityUserDTO : Microsoft.AspNetCore.Identity.IdentityUser
+    {
+        public string RoleName { get; set; }
+    }
+}

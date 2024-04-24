@@ -1,0 +1,208 @@
+﻿@using Info_Recluso.Auth
+@using System.Security.Claims
+@inherits LayoutComponentBase
+
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager navigations
+
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudThemeProvider @ref="mudThemeProvider" Theme="mainTheme" />
+
+<PageTitle>InfoRecluso</PageTitle>
+
+<MudLayout Style="padding:0.1px !important;">
+    @*App Bar*@
+    <MudAppBar Class=" "
+               Style="background-color:#f4f4f4 !important; box-sizing:border-box !important;
+                      border-top-left-radius: 0px 0px;
+                      border-top-right-radius:0px 0px;
+                      border-bottom-right-radius:0px 0px;
+                      border-bottom-left-radius:0px 0px;
+                      box-shadow: 3px 3px 3px -3px rgba(0, 0, 0, 0.5) !important;"
+               Elevation="0"
+               Dense="true"
+               Fixed=true>
+
+        @*Button for Menu*@
+        <MudIconButton Class="mx-0"
+                       Size="Size.Medium"
+                       Icon="@Icons.Material.Rounded.Menu"
+                       Color="Color.Info"
+                       OnClick="@(() => (openMainMenu,openSubmenu)= (!openMainMenu,false))" />
+
+        @*Site Name*@
+        <MudHidden Breakpoint="Breakpoint.Xs" Invert="false">
+            @if (openMainMenu == false)
+            {
+                <MudText Color="Color.Info"
+                         Class=""
+                         Style="font-weight:lighter;"
+                         Typo="Typo.h6">
+                    @company
+                </MudText>
+            }
+        </MudHidden>
+
+        <MudSpacer />
+
+        @*User Picture*@
+        <MudMenu Dense=true
+                 Disabled=openSubmenu
+                 ActivationEvent="@MouseEvent.LeftClick"
+                 AnchorOrigin="Origin.BottomCenter"
+                 TransformOrigin="Origin.BottomLeft">
+            <ActivatorContent>
+                <MudAvatar Style="background-color:transparent !important" Size="Size.Medium" Image="@(ImgUrl)" />
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem Disabled=true Style="color:black !important; font-weight:lighter !important;">@userName</MudMenuItem>
+
+                <MudDivider DividerType="DividerType.FullWidth" />
+
+                <MudMenuItem Disabled="true" IconSize="Size.Small" IconColor="Color.Dark" Icon="@Icons.Material.Rounded.Person">Profile</MudMenuItem>
+                <MudMenuItem Disabled="true" IconSize="Size.Small" IconColor="Color.Dark" Icon="@Icons.Material.Rounded.Mail">Inbox</MudMenuItem>
+                <MudMenuItem Disabled="true" IconSize="Size.Small" IconColor="Color.Dark" Icon="@Icons.Material.Rounded.Settings">Settings</MudMenuItem>
+
+                <MudDivider DividerType="DividerType.FullWidth" Light=true />
+
+                <MudMenuItem IconSize="Size.Small" OnClick="async ()=>await logOutApp()" IconColor="Color.Dark" Icon="@Icons.Material.Rounded.TrackChanges">Sign Out</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </MudAppBar>
+
+    @*Menu Principal*@
+    <MudDrawer ClipMode="DrawerClipMode.Never"
+               Variant="DrawerVariant.Responsive"
+               Class="MudDrawer"
+               Elevation="1"
+               Fixed=true
+               Style="background-color:#f4f4f4 !important; box-sizing:border-box !important;
+                      border-top-left-radius: 0px 0px;
+                      border-top-right-radius:0px 0px;
+                      border-bottom-right-radius:25px 25px;
+                      border-bottom-left-radius:0px 0px;"
+               @bind-Open="@openMainMenu">
+        <MudDrawerHeader Dense=true>
+            <MudGrid Justify="Justify.Center" Class="mb-1">
+
+                <MudAvatar Style="height:70px; width:70px; margin-top:10px;   box-shadow: 2px 5px 8px -3px rgba(0, 0, 0, 0.5) !important;" Color="Color.Info">
+                    <span style="font-size:x-small;">
+                        @company
+                    </span>
+                </MudAvatar>
+
+            </MudGrid>
+        </MudDrawerHeader>
+
+        <MudDrawerContainer>
+            <MudNavLink Href="/" Icon="@Icons.Material.Rounded.Home">Home</MudNavLink>
+            <MudNavMenu Bordered=true Margin="Margin.Dense" Color="Color.Info">
+                <AuthorizeView Roles="admin,dev">
+                    <Authorized>
+                        <MudNavGroup Title="Usuarios" Icon="@Icons.Material.Rounded.Person" Expanded="true">
+                            <MudNavLink Href="/users" Icon="@Icons.Material.Rounded.List">Listado </MudNavLink>
+                            <MudNavLink Href="/add/user" Icon="@Icons.Material.Rounded.Add">Nuevo </MudNavLink>
+                        </MudNavGroup>
+                    </Authorized>
+                </AuthorizeView>
+
+                <AuthorizeView Roles="admin,judge,officer,dev">
+                    <Authorized>
+                        <MudNavGroup Title="Reclusos" Icon="@Icons.Material.Rounded.Person3" Expanded="true">
+                            <MudNavLink Href="/prisoner" Icon="@Icons.Material.Rounded.List">Listado </MudNavLink>
+                            <MudNavLink Href="/add/prisoner" Icon="@Icons.Material.Rounded.Add" Class="@(  disable? "invisible":"")">Nuevo </MudNavLink>
+                        </MudNavGroup>
+                    </Authorized>
+                </AuthorizeView>
+            </MudNavMenu>
+        </MudDrawerContainer>
+    </MudDrawer>
+
+    @*Sub Menu right*@
+    <MudDrawer ClipMode="DrawerClipMode.Never"
+               Anchor="Anchor.Right"
+               Breakpoint="Breakpoint.Xs"
+               DisableOverlay="false"
+               Height="200px"
+               Variant="DrawerVariant.Temporary"
+               Style="opacity:0.95;  margin-top:75px!important;border-top-left-radius: 30px 30px; border-bottom-left-radius:12px 12px;"
+               @bind-Open="@openSubmenu"
+               Elevation="0">
+        <MudDrawerHeader Dense=true>
+            <MudGrid Justify="Justify.Center" Class="mb-0">
+                <MudIconButton OnClick="@(()=> openSubmenu=!openSubmenu)" Icon="@Icons.Material.Rounded.Shortcut" />
+                <MudDivider DividerType="DividerType.FullWidth" Absolute=true Style="background-color:black" Light=true />
+            </MudGrid>
+        </MudDrawerHeader>
+
+        <MudDrawerContainer>
+            <MudNavMenu>
+                <MudDivider DividerType="DividerType.FullWidth" Style="background-color:black" Light=true />
+                <MudNavLink Href="/add/client" Icon="@Icons.Material.Rounded.PersonAdd" IconColor="Color.Inherit">Nuevo Cliente</MudNavLink>
+                <MudNavLink Href="/login" Icon="@Icons.Material.Rounded.AddShoppingCart" IconColor="Color.Inherit">Nueva Orden </MudNavLink>
+            </MudNavMenu>
+        </MudDrawerContainer>
+    </MudDrawer>
+
+    <MudMainContent Class="pt-11">
+        <MudContainer Class="mt-11">
+
+            @Body
+
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+<MudScrollToTop Visible=false>
+    <MudFab Color="Color.Dark"
+            StartIcon="@Icons.Material.Rounded.KeyboardArrowUp"
+            Size="Size.Small" />
+</MudScrollToTop>
+
+@code {
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationState { get; set; }
+
+    private bool openMainMenu = true,
+                 openSubmenu = false,
+                 dense = true,
+                 _isDarkMode = true,
+                 disable = false,
+                 _themeManagerOpen = false;
+
+
+    public string? SearchGlobal { get; set; }
+    private string userName = "",
+           company = "Info-Recluso",
+           ImgUrl = "img/progress.gif";
+
+    private MudTheme mainTheme = new() { Palette = new Palette() { Primary = Colors.Blue.Lighten1, Secondary = Colors.Shades.Black } };
+    private MudThemeProvider mudThemeProvider;
+
+    protected async override Task OnInitializedAsync()
+    {
+        #region check status
+        var authState = await authenticationState;
+        var userGet = authState.User;
+
+        userName = userGet.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
+
+        if (userGet.IsInRole("judge") || userGet.IsInRole("anonymous"))
+            disable = true;
+        #endregion
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstTime)
+    {
+        if (firstTime) { }
+    }
+
+    private async Task logOutApp()
+    {
+        var authSection = (CustomProviderAuthenticate)AuthState;
+        await authSection?.LogOut();
+        navigations.NavigateTo("/", true, false);
+    }
+}

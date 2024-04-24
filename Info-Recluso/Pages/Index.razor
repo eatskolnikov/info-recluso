@@ -1,0 +1,55 @@
+﻿@page "/"
+@using Datos.Generic
+@using Datos.Dtos
+@using Datos.Interfaces
+@using Datos.Utilities
+
+@inject AccountServices account
+@inject NavigationManager navigationManager
+@inject IPrisonerServices prisonerManager
+
+@attribute [Authorize(Roles = "anonymous,dev,admin,judge,officer")]
+
+<MudChart ChartType="ChartType.Donut" Width="300px" Height="300px" InputData="@data" InputLabels="@labels">
+    <CustomGraphics>
+        <text class="donut-inner-text" x="47%" y="35%" dominant-baseline="middle" text-anchor="middle" fill="black" font-family="Helvetica" font-size="2">Total</text>
+        <text class="donut-inner-text" x="47%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="black" font-family="Helvetica" font-size="5">@data.Sum().ToString()</text>
+    </CustomGraphics>
+</MudChart>
+
+@code {
+    public double[] data = { 0, 0 };
+    public string[] labels = { "Hombres", "Mujeres" };
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        #region check status
+        var authState = await authenticationState;
+        var user = authState.User;
+
+        if (user.IsInRole("anonymous"))
+            navigationManager.NavigateTo("login");
+
+        var result = await prisonerManager.GetPrisoners();
+
+        if (result.response == Response.Ok())
+        {
+            var men = result.prisoners.Where(x => x.Gender.ToLower() == Gender.GenderName.hombre.ToString()).Count();
+            var women = result.prisoners.Where(x => x.Gender.ToLower() == Gender.GenderName.mujer.ToString()).Count();
+
+            data[0] = men;
+            data[1] = women;
+        }
+        #endregion
+    }
+
+    protected override async Task OnAfterRenderAsync(bool IsFirstCall)
+    {
+        if (IsFirstCall)
+        {
+        }
+    }
+}

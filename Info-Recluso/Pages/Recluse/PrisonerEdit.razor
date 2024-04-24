@@ -1,0 +1,222 @@
+﻿@using Datos.Entities;
+@using Datos.Generic;
+@using Datos.Dtos;
+@using Datos.Interfaces;
+@using Datos.Utilities;
+
+@attribute [Authorize(Roles = "dev,admin,officer")]
+
+<PageTitle>Reclusos</PageTitle>
+
+<EditForm @ref=editForm Model="@model">
+    <DataAnnotationsValidator />
+    <MudPaper Elevation="1" Class="clr-main">
+        <MudItem xs=12 lg=12 sm=12 xxl=12 Class="d-flex flex-wrap p-3 mx-sm-4 clr-main">
+            <MudItem xs=12 sm=12 xl=12 xxl=12 Class="clr-main">
+                <MudPaper Elevation="0" Class="mb-2 px-0 mx-0 clr-main">
+                    <MudToolBar Dense=true Class="px-0 mx-0">
+                        <MudChip Size="Size.Small"
+                                 DisableRipple=true
+                                 Disabled=false
+                                 Label=true
+                                 Style="cursor:default"
+                                 Variant="Variant.Outlined"
+                                 Color="Color.Primary"
+                                 Class="mt-3">
+                            <MudText Typo="Typo.button">
+                                <b>Reclusos</b>
+                            </MudText>
+                        </MudChip>
+
+                        <MudSpacer />
+                    </MudToolBar>
+                </MudPaper>
+            </MudItem>
+
+            <MudDivider Light=false Class="my-2 mx-1" />
+
+            @* nombre *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField Label="Nombre" Class="mx-4"
+                              @bind-Value="model.Names"
+                              For="@(() => model.Names)"
+                              AdornmentIcon="@Icons.Material.Rounded.Person"
+                              Adornment=" Adornment.Start"
+                              Margin="Margin.Dense"
+                              IconSize="Size.Small"
+                              DisableUnderLine=@false />
+            </MudItem>
+
+            @* apellido *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField Label="Apellidos" Class="mx-4"
+                              @bind-Value="model.LastName"
+                              For="@(() => model.LastName)"
+                              AdornmentIcon="@Icons.Material.Rounded.Person2"
+                              Adornment=" Adornment.Start"
+                              Margin="Margin.Dense"
+                              IconSize="Size.Small"
+                              DisableUnderLine=false />
+            </MudItem>
+
+            @* delitos *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField Label="Delitos" Class="mx-4"
+                              @bind-Value="model.Crimes"
+                              For="@(() => model.Crimes)"
+                              AdornmentIcon="@Icons.Material.Rounded.ErrorOutline"
+                              Adornment=" Adornment.Start"
+                              IconSize="Size.Small"
+                              Margin="Margin.Dense"
+                              DisableUnderLine=false />
+            </MudItem>
+
+            @* cedula *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudTextField Label="Cedula" Class="mx-4"
+                              @bind-Value="model.Id"
+                              For="@(() => model.Id)"
+                              MaxLength="20"
+                              AdornmentIcon="@Icons.Material.Rounded.CreditCard"
+                              Adornment=" Adornment.Start"
+                              IconSize="Size.Small"
+                              Margin="Margin.Dense"
+                              DisableUnderLine=false />
+            </MudItem>
+
+            @* notas *@
+            <MudItem xs=12 sm=12 xl=12 xxl=12>
+                <MudTextField Label="Detalles del delito" Class="mx-4"
+                              @bind-Value="model.Notes"
+                              For="@(() => model.Notes)"
+                              Lines="2"
+                              AdornmentIcon="@Icons.Material.Rounded.Notes"
+                              Adornment=" Adornment.Start"
+                              Margin="Margin.Dense"
+                              IconSize="Size.Small"
+                              DisableUnderLine=false />
+            </MudItem>
+
+            @* fecha nacimiento *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudDatePicker Class="mx-4"
+                               IconSize="Size.Small"
+                               DisableToolbar="true"
+                               Label="Fecha Nacimiento"
+                               Editable="true"
+                               @bind-Date="model.BirthDate" />
+            </MudItem>
+
+            @* fecha admision *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudDatePicker Class="mx-4"
+                               IconSize="Size.Small"
+                               DisableToolbar="true"
+                               Label="Fecha Admision"
+                               Editable="true"
+                               @bind-Date="model.AdmissionDate" />
+            </MudItem>
+
+            @* Genero*@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudSelect Class="mx-4" @bind-Value="genderSelected" Label="Género" OpenIcon="@Icons.Material.Rounded.Transgender" AdornmentColor="Color.Secondary">
+                    @foreach (Gender.GenderName item in Enum.GetValues(typeof(Gender.GenderName)))
+                    {
+                        <MudSelectItem Value="@item">@item</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Status *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudSelect Class="mx-4" @bind-Value="statusSelected" Label="Estado" OpenIcon="@Icons.Material.Rounded.Info" AdornmentColor="Color.Secondary">
+                    @foreach (Conviction.Status item in Enum.GetValues(typeof(Conviction.Status)))
+                    {
+                        <MudSelectItem Value="@item">@item</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Recinto *@
+            <MudItem xs=12 sm=6 xl=4 xxl=3>
+                <MudSelect Class="mx-4" @bind-Value="prisonSelected" Label="Carcel" OpenIcon="@Icons.Material.Rounded.Security" AdornmentColor="Color.Secondary">
+                    @foreach (var item in Prison.Prisons.ToList())
+                    {
+                        <MudSelectItem Value="@item">@item</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudChip Class="mb-1 shadow my-4 mx-2 ml-auto" Size="Size.Small"
+                     @onclick="@(() => OnValidSubmit())" Variant="Variant.Filled" Color="Color.Primary">
+                + Editar
+            </MudChip>
+        </MudItem>
+    </MudPaper>
+</EditForm>
+
+@code {
+
+    [Inject] private ISnackbar snackbar { get; set; }
+    [Inject] private NavigationManager navigationManager { get; set; }
+    [Inject] private IPrisonerServices prisonerManager { get; set; }
+    [Inject] private ISnackbar DialogService { get; set; }
+
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = null;
+
+    private Gender.GenderName genderSelected { get; set; }
+    private Conviction.Status statusSelected { get; set; }
+    private string prisonSelected { get; set; }
+
+
+    private bool CloseModal = true;
+    private bool Success;
+    private EditForm editForm = new EditForm();
+
+    public static PrisonerEditDto? model { get; set; } = new();
+
+    private Task ClosePopUp(DialogResult dialog, bool force = false)
+    {
+        if (MudDialog != null && (force || CloseModal))
+            MudDialog.Close(dialog);
+
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var genero = Gender.Genders.Where(x => x.ToString().ToLower() == $"{model.Gender.ToLower()}").ToList();
+        var status = Conviction.GetStatus.Where(x => x.ToString().ToLower() == $"{model.ConvictionStatus.ToLower()}").ToList();
+        var prison = Prison.Prisons.Where(x => x.ToLower() == model.Prison.ToLower());
+
+
+        genderSelected = genero.FirstOrDefault();
+        statusSelected = status.FirstOrDefault();
+        prisonSelected = prison.FirstOrDefault();
+    }
+
+    private async Task OnValidSubmit()
+    {
+        model.Gender = genderSelected.ToString();
+        model.ConvictionStatus = statusSelected.ToString();
+        model.Prison = prisonSelected.ToString();
+
+
+        if (!editForm.EditContext.Validate())
+        {
+            snackbar.Add("Completa todos los pasos", Severity.Error);
+            return;
+        }
+
+        var response = await prisonerManager.EditPrisonerAsync(model);
+
+        if (response == Response.Ok())
+        {
+            snackbar.Add("Edicion exitosa", Severity.Success);
+            MudDialog.Close(DialogResult.Ok<object>(model));
+            return;
+        }
+
+        snackbar.Add(string.IsNullOrEmpty(response?.Message) ? "Ha ocurrido error" : response?.Message, Severity.Error);
+    }
+}

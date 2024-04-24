@@ -1,0 +1,16 @@
+﻿Para agregar la base de datos, seguir los siguientes pasos:
+
+1. Asegurarse de agregar el connection string en los archivos appsettings.json y appsettings.Development.json en el proyecto info-recluso (client)
+
+1.1 Si el connection string no tiene autenticacion (como esta en este proyecto) puede usar esta estructura:
+"Data Source=AquiSuServidorDeBaseDeDatos;Initial Catalog=InfoReclusoDB;Trusted_Connection=true;Trust Server Certificate=true",
+
+1.2 Si por el contrario tiene autenticacion, puede usar esta estructura:
+"Data Source=AquiSuServidorDeBaseDeDatos;Initial Catalog=InfoReclusoDB;User ID=AquiElUsuario;Password=AquiElPassword;Trust Server Certificate=true"
+
+2. Abrir la consola de nugget package manager
+
+3. En DefaultProject seleccionar el proyecto Datos
+
+4. Ejecutar el siguiente comando: update-database
+(Esto le agregara la estructura de la base de datos sin necesidad de ejecutar un backup, a esto se le llama Code First de Entity Framework Core).
